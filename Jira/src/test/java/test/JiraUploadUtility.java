@@ -20,26 +20,26 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
-public class JiraUploadUtility
-{
+public class JiraUploadUtility {
 	static Excel e;
 	static String excelName = "JiraUpload";
 	static String sheetName;
-	static int summaryMapping=-1, gwtMapping=-1, labelMapping=-1, testTypeMapping=-1, uploadStatus=-1, testScreenNameMapping=-1, zephyrTestCaseIDMapping=-1, currentSprintMapping=-1, assigneeMapping=-1, urlMapping=-1, issueRelatesToMapping=-1, componentsMapping=-1;	
+	static int summaryMapping = -1, gwtMapping = -1, labelMapping = -1, testTypeMapping = -1, uploadStatus = -1,
+			testScreenNameMapping = -1, zephyrTestCaseIDMapping = -1, currentSprintMapping = -1, assigneeMapping = -1,
+			urlMapping = -1, issueRelatesToMapping = -1, componentsMapping = -1;
 	static String currDir = System.getProperty("user.dir");
-	static String filePath = currDir + "\\"+excelName+".xlsx";
-	static String defaultProjectName = "", hitCreateAfterEveryTest = "", username = "", password = "", runWith = "BROWSER", projectKey = "";
+	static String filePath = currDir + "\\" + excelName + ".xlsx";
+	static String defaultProjectName = "", hitCreateAfterEveryTest = "", username = "", password = "",
+			runWith = "BROWSER", projectKey = "";
 	static boolean boolHitCreateAfterEveryTest = false;
 	static int firstTest = 0;
 	static String postUrl = "https://jira.mediware.com/rest/api/2/issue/";
-	
+
 	static int successfullyUploaded = 0, errorInUploading = 0;
-	
-	public static void main(String[] args) throws Exception
-	{
+
+	public static void main(String[] args) throws Exception {
 		System.out.println("Started...");
-		try
-		{
+		try {
 			sheetName = "Tests";
 			e = new Excel(filePath);
 			e.getSheet("Data");
@@ -49,42 +49,38 @@ public class JiraUploadUtility
 			password = e.getStringCellValue(3, 1);
 			runWith = e.getStringCellValue(4, 1);
 			projectKey = e.getStringCellValue(5, 1);
-			
-			if(defaultProjectName == null || defaultProjectName.equals(""))
+
+			if (defaultProjectName == null || defaultProjectName.equals(""))
 				throw new Exception("Please enter default project name in 'Data' sheet of JiraUpload.xlsx");
-			
-			if(runWith == null || runWith.equals(""))
+
+			if (runWith == null || runWith.equals(""))
 				throw new Exception("Please specify whether to run with BROWSER or through API");
-			
-			if((projectKey == null || projectKey.equals("")) && runWith.equalsIgnoreCase("API"))
+
+			if ((projectKey == null || projectKey.equals("")) && runWith.equalsIgnoreCase("API"))
 				throw new Exception("Please specify the Project Key");
-			
-			if(hitCreateAfterEveryTest!=null && !hitCreateAfterEveryTest.equals(""))
-				if(hitCreateAfterEveryTest.trim().equalsIgnoreCase("Y"))
+
+			if (hitCreateAfterEveryTest != null && !hitCreateAfterEveryTest.equals(""))
+				if (hitCreateAfterEveryTest.trim().equalsIgnoreCase("Y"))
 					boolHitCreateAfterEveryTest = true;
-			
+
 			e.getSheet(sheetName);
 			ArrayList<TestCase> allTestCases = new ArrayList<TestCase>();
 			TestCase tc = null;
 			setMapping();
 			System.out.println("====================================");
-			for(int i=1; i<e.sheet.getPhysicalNumberOfRows(); i++)
-			{
-				try
-				{
+			for (int i = 1; i < e.sheet.getPhysicalNumberOfRows(); i++) {
+				try {
 					tc = JiraUploadUtility.getTestCase(i);
-				}
-				catch(Exception e) 
-				{
+				} catch (Exception e) {
 					tc = null;
-					System.out.println("Exception : "+e.getMessage());
+					System.out.println("Exception : " + e.getMessage());
 				}
-				if(tc!=null)
-					if(tc.summary!=null && !tc.summary.equals(""))
+				if (tc != null)
+					if (tc.summary != null && !tc.summary.equals(""))
 						allTestCases.add(tc);
 			}
 			e.closeWorkbook();
-			
+
 			System.out.println("====================================");
 			System.out.println("Total no of Records to process : " + allTestCases.size());
 			System.out.println("Hit ENTER to continue. (Please close the JiraUpload.xlsx sheet)");
@@ -92,46 +88,46 @@ public class JiraUploadUtility
 			sc.nextLine();
 			System.out.println("====================================");
 			int counter = 1;
-			for(TestCase t : allTestCases)
-			{
-				System.out.println("\n\n==============================================================================================================");
-				System.out.println("Test Number "+(counter++)+" of "+allTestCases.size()+" : "+t.summary);
-				if(runWith.equalsIgnoreCase("API"))
+			for (TestCase t : allTestCases) {
+				System.out.println(
+						"\n\n==============================================================================================================");
+				System.out.println("Test Number " + (counter++) + " of " + allTestCases.size() + " : " + t.summary);
+				if (runWith.equalsIgnoreCase("API"))
 					uploadThroughApi(t);
 				else
 					uploadThroughWeb(t);
 			}
-			System.out.println("==============================================================================================================");
-			System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Successfully Completed @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-			System.out.println("Upload SUCCESS    :     "+successfullyUploaded+"\nUpload FAILED         :     " + errorInUploading);
-			JOptionPane.showMessageDialog(null, "Upload SUCCESS    :     "+successfullyUploaded+"\nUpload FAILED         :     " + errorInUploading);
-		}
-		catch(Exception e)
-		{
+			System.out.println(
+					"==============================================================================================================");
+			System.out.println(
+					"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Successfully Completed @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+			System.out.println("Upload SUCCESS    :     " + successfullyUploaded + "\nUpload FAILED         :     "
+					+ errorInUploading);
+			JOptionPane.showMessageDialog(null, "Upload SUCCESS    :     " + successfullyUploaded
+					+ "\nUpload FAILED         :     " + errorInUploading);
+		} catch (Exception e) {
 			JOptionPane.showMessageDialog(null, e.getMessage());
-			JOptionPane.showMessageDialog(null, "Upload SUCCESS    :     "+successfullyUploaded+"\nUpload FAILED         :     " + errorInUploading);
+			JOptionPane.showMessageDialog(null, "Upload SUCCESS    :     " + successfullyUploaded
+					+ "\nUpload FAILED         :     " + errorInUploading);
 			throw e;
-		}		
+		}
 	}
-	
-	public static void uploadThroughApi(TestCase t) throws Exception
-	{
-		try
-		{
+
+	public static void uploadThroughApi(TestCase t) throws Exception {
+		try {
 			String encoder = authenticateUser();
-			StringBuffer request = new StringBuffer();			
+			StringBuffer request = new StringBuffer();
 			request.append("{\"fields\": {\"project\": {\"key\": \"");
 			request.append(projectKey);
 			request.append("\"},\"issuetype\": {\"name\": \"Test\"},\"summary\": \"");
 			request.append(t.summary.replace("\n", "\\r\\n").replace("\"", "\\\""));
 			request.append("\",\"description\": \"");
-			if(t.testScreenName !=null && !t.testScreenName.equals(""))
-				request.append(t.testScreenName.replace("\n", "\\r\\n").replace("\"", "\\\""));			
-			if(t.gwtSteps !=null && !t.gwtSteps.equals(""))
+			if (t.testScreenName != null && !t.testScreenName.equals(""))
+				request.append(t.testScreenName.replace("\n", "\\r\\n").replace("\"", "\\\""));
+			if (t.gwtSteps != null && !t.gwtSteps.equals(""))
 				request.append("\\r\\n" + t.gwtSteps.replace("\n", "\\r\\n").replace("\"", "\\\""));
 			request.append("\"");
-			if(t.assignee !=null && !t.assignee.equals(""))
-			{
+			if (t.assignee != null && !t.assignee.equals("")) {
 				request.append(",\"assignee\": {\"name\": \"");
 				request.append(t.assignee);
 			}
@@ -139,13 +135,14 @@ public class JiraUploadUtility
 			request.append(",\"labels\": [\"");
 			request.append(t.label);
 			request.append("\"]},\"update\" : {\"customfield_10006\": [{\"set\": 0}]");
-			if(t.issueRelatesTo !=null && !t.issueRelatesTo.equals(""))
-			{
-				request.append(",\"issuelinks\": [{\"add\": {\"type\": {\"name\": \"Relates\",\"inward\": \"relates to\",\"outward\": \"relates to\"},\"outwardIssue\": {\"key\": \"");
-				request.append(t.issueRelatesTo);
+			int totalIssueRelatesTo = t.issueRelatesTo.length;
+			if (t.issueRelatesTo.length != 0) {
+				request.append(
+						",\"issuelinks\": [{\"add\": {\"type\": {\"name\": \"Relates\",\"inward\": \"relates to\",\"outward\": \"relates to\"},\"outwardIssue\": {\"key\": \"");
+				request.append(t.issueRelatesTo[0].trim());
 				request.append("\"}}}]");
 			}
-			request.append("}}");			
+			request.append("}}");
 			System.out.println("*************************************");
 			System.out.println(request.toString());
 			System.out.println("*************************************");
@@ -155,18 +152,43 @@ public class JiraUploadUtility
 			String testCaseId = getTestCaseId(response);
 			System.out.println("Test Case ID : " + testCaseId);
 			System.out.println("*************************************");
-			
+
+			boolean linkingErrorFlag = false;
+			if (t.issueRelatesTo.length > 1) {
+				String putUrl = postUrl + testCaseId;
+				for (int i = 1; i < t.issueRelatesTo.length; i++) {
+					try {
+						request = new StringBuffer();
+						request.append(
+								"{\"update\": {\"issuelinks\": [{\"add\": {\"type\": {\"name\": \"Relates\",\"inward\": \"relates to\",\"outward\": \"relates to\"},\"outwardIssue\": {\"key\": \"");
+						request.append(t.issueRelatesTo[i]);
+						request.append("\"}}}]}}");
+						System.out.println(request.toString());
+						sendPutRequest(putUrl, request.toString(), encoder);
+						System.out.println("Additionally linked ID '" + t.issueRelatesTo[i] + "' to Test Case '"
+								+ testCaseId + "'");
+						System.out.println("*************************************");
+						request.delete(0, request.length());
+					} catch (Exception e3) {
+						linkingErrorFlag = true;
+						System.out.println("ERROR : In linking Jira ID '" + t.issueRelatesTo[i]
+								+ "' with newly created Test Case '" + testCaseId + "'");
+					}
+				}
+			}
+
 			successfullyUploaded++;
 			e = new Excel(filePath);
 			e.getSheet(sheetName);
 			setMapping();
-			setUploadValue(t.summary, "TRUE", testCaseId);
+			if (linkingErrorFlag)
+				setUploadValue(t.summary, "TRUE/IssuesPartiallyLinked", testCaseId);
+			else
+				setUploadValue(t.summary, "TRUE", testCaseId);
 			FileOutputStream outputStream = new FileOutputStream(filePath);
 			e.workbook.write(outputStream);
 			e.closeWorkbook();
-		}
-		catch(Exception e1)
-		{
+		} catch (Exception e1) {
 			errorInUploading++;
 			e1.printStackTrace();
 			e = new Excel(filePath);
@@ -178,9 +200,7 @@ public class JiraUploadUtility
 			e.closeWorkbook();
 		}
 	}
-	
-	
-	
+
 	public static String sendPostRequest(String postUrl, String request, String encoder) {
 		StringBuffer jsonString = null;
 		try {
@@ -208,16 +228,44 @@ public class JiraUploadUtility
 		}
 		return jsonString.toString();
 	}
-	
-	private static String getTestCaseId(String jsonString) throws Exception
-	{
+
+	public static String sendPutRequest(String putUrl, String request, String encoder) {
+		StringBuffer jsonString = null;
+		try {
+			URL url = new URL(putUrl);
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection.setDoInput(true);
+			connection.setDoOutput(true);
+			connection.setRequestMethod("PUT");
+			connection.setRequestProperty("Authorization", "Basic " + encoder);
+			connection.setRequestProperty("Accept", "application/json");
+			connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+			OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream(), "UTF-8");
+			writer.write(request);
+			writer.close();
+			BufferedReader br = new BufferedReader(new java.io.InputStreamReader(connection.getInputStream()));
+			jsonString = new StringBuffer();
+			String line;
+			while ((line = br.readLine()) != null) {
+				jsonString.append(line);
+			}
+			br.close();
+			connection.disconnect();
+		} catch (Exception e) {
+			throw new RuntimeException(e.getMessage());
+		}
+		return jsonString.toString();
+	}
+
+	private static String getTestCaseId(String jsonString) throws Exception {
 		JSONObject jsonObject = new JSONObject(jsonString);
 		return jsonObject.getString("key");
 	}
 
 	private static String authenticateUser() throws Exception {
-		/*final String username = "amit.bhaik";
-		final String password = "!Aniil2691%";*/
+		/*
+		 * final String username = "amit.bhaik"; final String password = "!Aniil2691%";
+		 */
 		Authenticator.setDefault(new Authenticator() {
 			protected PasswordAuthentication getPasswordAuthentication() {
 				return new PasswordAuthentication(username, password.toCharArray());
@@ -228,120 +276,119 @@ public class JiraUploadUtility
 		String encoded = java.util.Base64.getEncoder().encodeToString(authBytes);
 		return encoded;
 	}
-	
-	public static void uploadThroughWeb(TestCase t) throws Exception
-	{
+
+	public static void uploadThroughWeb(TestCase t) throws Exception {
 		String testCaseId = "";
 		WebDriver driver = null;
 		BasicUtils basic = null;
 		System.out.println("Uploading : " + t.summary);
-		
-		if(firstTest == 0)
-		{
+
+		if (firstTest == 0) {
 			driver = LaunchBrowsers.launchChrome();
 			basic = new BasicUtils(driver);
-			basic.justNavigate("https://jira.mediware.com");			
-			if(username!=null && !username.equals(""))
-			{
+			basic.justNavigate("https://jira.mediware.com");
+			if (username != null && !username.equals("")) {
 				basic.typeText(By.id("login-form-username"), username);
 				basic.typeText(By.id("login-form-password"), password);
 				basic.click(By.id("login"));
-			}
-			else
-				Thread.sleep(10000);			
+			} else
+				Thread.sleep(10000);
 			basic.click(By.id("browse_link"));
-			basic.click(By.xpath("//div[@id='browse_link-content']/descendant::a[contains(text(),'"+defaultProjectName+"')]"));		
+			basic.click(By.xpath(
+					"//div[@id='browse_link-content']/descendant::a[contains(text(),'" + defaultProjectName + "')]"));
 		}
-		
+
 		testCaseId = "";
-		try
-		{
+		try {
 			basic.click(By.id("create_link"));
-			if(firstTest == 0)
-			{
+			if (firstTest == 0) {
 				basic.click(By.id("issuetype-field")).typeText(By.id("issuetype-field"), "Test");
 				basic.click(By.xpath("//h2[@title='Create Issue']"));
 				Thread.sleep(1000);
 			}
 			firstTest++;
-			
+
 			System.out.println("Entering details");
-			
+
 			basic.typeText(By.id("summary"), t.summary);
-			
-			if(!t.testScreenName.isEmpty())
-			{
+
+			if (!t.testScreenName.isEmpty()) {
 				basic.click(By.id("aui-uid-3"));
 				basic.typeText(By.id("description"), t.testScreenName);
-				/*if(basic.isElementPresentAtThisMoment(By.id("mce_8_ifr")))
-				{
-					basic.switchToIframe(By.id("mce_8_ifr"));
-					basic.typeText(By.id("description"), t.testScreenName);
-					basic.switchBackToParent();
-				}
-				else
-				{
-					
-				}*/
+				/*
+				 * if(basic.isElementPresentAtThisMoment(By.id("mce_8_ifr"))) {
+				 * basic.switchToIframe(By.id("mce_8_ifr"));
+				 * basic.typeText(By.id("description"), t.testScreenName);
+				 * basic.switchBackToParent(); } else {
+				 * 
+				 * }
+				 */
 			}
-			
+
 			basic.typeText(By.xpath("//label[contains(text(),'Story Points')]/following-sibling::input"), "0");
-			
-			if(!t.assignee.isEmpty())
-			{
+
+			if (!t.assignee.isEmpty()) {
 				basic.typeText(By.id("assignee-field"), t.assignee);
 				Thread.sleep(2000);
 				basic.pressEnter();
-				//basic.click(By.xpath("//ul[@id='all-users']/descendant::em"));
+				// basic.click(By.xpath("//ul[@id='all-users']/descendant::em"));
 			}
-			
+
 			basic.typeText(By.id("labels-textarea"), t.label);
 			basic.select(By.xpath("//label[contains(text(),'Test Type')]/following-sibling::select"), t.testType);
-			
-			if(!t.currentSprint.isEmpty())
-			{
+
+			if (!t.currentSprint.isEmpty()) {
 				basic.typeText(By.id("customfield_10000-field"), t.currentSprint);
-				//basic.click(By.xpath("//ul[@id='suggestions']/descendant::span"));
+				// basic.click(By.xpath("//ul[@id='suggestions']/descendant::span"));
 				Thread.sleep(2000);
 				basic.pressEnter();
 			}
-			
+
 			Thread.sleep(500);
-			
-			if(!t.issueRelatesTo.isEmpty())
-			{
-				basic.typeText(By.id("issuelinks-issues-textarea"), t.issueRelatesTo);
+
+			if (t.issueRelatesTo.length != 0) {
+				for (int i = 0; i < t.issueRelatesTo.length; i++) {
+					basic.typeText(By.id("issuelinks-issues-textarea"), t.issueRelatesTo[i]);
+					Thread.sleep(1000);
+					basic.pressEnter();
+				}
 			}
-			
-			if(!t.components.isEmpty())
-			{
+
+			if (!t.components.isEmpty()) {
 				basic.typeText(By.id("components-textarea"), t.components);
 			}
-			
-			for(int i=0; i<t.testSteps.size(); i++)
-			{
-				basic.typeText(By.xpath("//table[@id='teststep-table']/tbody[contains(@class,'create')]/tr[1]/descendant::textarea[1]"), t.testSteps.get(i));
-				basic.typeText(By.xpath("//table[@id='teststep-table']/tbody[contains(@class,'create')]/tr[1]/descendant::textarea[3]"), t.expectedResult.get(i));
+
+			for (int i = 0; i < t.testSteps.size(); i++) {
+				basic.typeText(By.xpath(
+						"//table[@id='teststep-table']/tbody[contains(@class,'create')]/tr[1]/descendant::textarea[1]"),
+						t.testSteps.get(i));
+				basic.typeText(By.xpath(
+						"//table[@id='teststep-table']/tbody[contains(@class,'create')]/tr[1]/descendant::textarea[3]"),
+						t.expectedResult.get(i));
 				Thread.sleep(500);
-				if((!t.url.isEmpty()) && i==0)
-				{
-					basic.typeText(By.xpath("//table[@id='teststep-table']/tbody[contains(@class,'create')]/tr[1]/descendant::textarea[2]"), t.url);
+				if ((!t.url.isEmpty()) && i == 0) {
+					basic.typeText(By.xpath(
+							"//table[@id='teststep-table']/tbody[contains(@class,'create')]/tr[1]/descendant::textarea[2]"),
+							t.url);
 					Thread.sleep(500);
-				}						
+				}
 				basic.click(By.xpath("//input[@class='aui-button' and @value='Add']"));
 				Thread.sleep(500);
 			}
-			
+
 			Thread.sleep(1500);
-			
-			if(boolHitCreateAfterEveryTest)
+
+			if (boolHitCreateAfterEveryTest)
 				basic.click(By.id("create-issue-submit"));
 			else
 				basic.wait.until(ExpectedConditions.invisibilityOfElementLocated(By.id("create-issue-submit")));
 			Thread.sleep(500);
-			
-			testCaseId = basic.wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//a[contains(@class,'issue-created-key')]"))).getAttribute("data-issue-key");
-			
+
+			testCaseId = basic.wait
+					.until(ExpectedConditions
+							.visibilityOfElementLocated(By.xpath("//a[contains(@class,'issue-created-key')]")))
+					.getAttribute("data-issue-key");
+
 			successfullyUploaded++;
 			e = new Excel(filePath);
 			e.getSheet(sheetName);
@@ -350,9 +397,7 @@ public class JiraUploadUtility
 			FileOutputStream outputStream = new FileOutputStream(filePath);
 			e.workbook.write(outputStream);
 			e.closeWorkbook();
-		}
-		catch(UnhandledAlertException e1)
-		{
+		} catch (UnhandledAlertException e1) {
 			errorInUploading++;
 			basic.waitForAlertAndAccept();
 			basic.wait.until(ExpectedConditions.invisibilityOfElementLocated(By.id("create-issue-submit")));
@@ -364,17 +409,12 @@ public class JiraUploadUtility
 			FileOutputStream outputStream = new FileOutputStream(filePath);
 			e.workbook.write(outputStream);
 			e.closeWorkbook();
-		}
-		catch(WebDriverException wde)
-		{
-			if(wde.getMessage().contains("reachable"))
-			{
+		} catch (WebDriverException wde) {
+			if (wde.getMessage().contains("reachable")) {
 				System.exit(0);
-				//break;
+				// break;
 			}
-		}
-		catch(Exception e1)
-		{
+		} catch (Exception e1) {
 			errorInUploading++;
 			e = new Excel(filePath);
 			e.getSheet(sheetName);
@@ -383,273 +423,243 @@ public class JiraUploadUtility
 			FileOutputStream outputStream = new FileOutputStream(filePath);
 			e.workbook.write(outputStream);
 			e.closeWorkbook();
-			JOptionPane.showMessageDialog(null, "Some exception occured, please add steps for this test case manually and hit 'Create' button!");					
+			JOptionPane.showMessageDialog(null,
+					"Some exception occured, please add steps for this test case manually and hit 'Create' button!");
 		}
-		
-		//basic.click(By.xpath("//span[@class='aui-icon icon-close' and @role='button']"));
-		//e.closeWorkbook();				
-	
+
+		// basic.click(By.xpath("//span[@class='aui-icon icon-close' and
+		// @role='button']"));
+		// e.closeWorkbook();
+
 	}
-	
-	public static void setUploadValue(String testName, String value, String testCaseId)
-	{
-		for(int i=1; i<e.sheet.getPhysicalNumberOfRows(); i++)
-		{
-			if(e.getStringCellValue(i, summaryMapping).equalsIgnoreCase(testName))
-			{
-				try
-				{
+
+	public static void setUploadValue(String testName, String value, String testCaseId) {
+		for (int i = 1; i < e.sheet.getPhysicalNumberOfRows(); i++) {
+			if (e.getStringCellValue(i, summaryMapping).equalsIgnoreCase(testName)) {
+				try {
 					e.sheet.getRow(i).getCell(uploadStatus).setCellValue(value);
-				}
-				catch(Exception e1)
-				{
+				} catch (Exception e1) {
 					e.sheet.getRow(i).createCell(uploadStatus).setCellValue(value);
 				}
-				
-				try
-				{
+
+				try {
 					e.sheet.getRow(i).getCell(zephyrTestCaseIDMapping).setCellValue(testCaseId);
-				}
-				catch(Exception e1)
-				{
+				} catch (Exception e1) {
 					e.sheet.getRow(i).createCell(zephyrTestCaseIDMapping).setCellValue(testCaseId);
 				}
 				break;
 			}
 		}
 	}
-	
-	public static void setMapping() throws Exception
-	{
-		//Map columns
-		for(int i=0; i<e.sheet.getRow(0).getPhysicalNumberOfCells(); i++)
-		{
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("title"))
+
+	public static void setMapping() throws Exception {
+		// Map columns
+		for (int i = 0; i < e.sheet.getRow(0).getPhysicalNumberOfCells(); i++) {
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("title"))
 				summaryMapping = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("gwt"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("gwt"))
 				gwtMapping = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("label"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("label"))
 				labelMapping = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("testtype"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("testtype"))
 				testTypeMapping = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("uploadstatus"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("uploadstatus"))
 				uploadStatus = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("description"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("description"))
 				testScreenNameMapping = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("jiratestcaseid"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("jiratestcaseid"))
 				zephyrTestCaseIDMapping = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("currentsprint"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("currentsprint"))
 				currentSprintMapping = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("assignee"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("assignee"))
 				assigneeMapping = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("url"))
-				urlMapping = i;		
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("issuerelatesto"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("url"))
+				urlMapping = i;
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("issuerelatesto"))
 				issueRelatesToMapping = i;
-			if(e.getStringCellValue(0, i).toLowerCase().trim().equals("components"))
+			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("components"))
 				componentsMapping = i;
-			
+
 		}
-		
-		if(summaryMapping == -1)
+
+		if (summaryMapping == -1)
 			throw new Exception("Please add 'Title' column in excel sheet");
-		if(gwtMapping == -1 && runWith.equalsIgnoreCase("BROWSER"))
+		if (gwtMapping == -1 && runWith.equalsIgnoreCase("BROWSER"))
 			throw new Exception("Please add 'GWT' column in excel sheet which will contain all GWT steps");
-		if(labelMapping == -1)
+		if (labelMapping == -1)
 			throw new Exception("Please add 'Label' column in excel sheet");
-		if(uploadStatus == -1)
+		if (uploadStatus == -1)
 			throw new Exception("Please add 'UploadStatus' column in excel sheet which will have TRUE of FALSE value");
-		if(testScreenNameMapping == -1 && runWith.equalsIgnoreCase("BROWSER"))
+		if (testScreenNameMapping == -1 && runWith.equalsIgnoreCase("BROWSER"))
 			throw new Exception("Please add 'Description' column in excel sheet");
-	}	
-	
-	public static TestCase getTestCase(int rowNumber)
-	{
+	}
+
+	public static TestCase getTestCase(int rowNumber) {
 		TestCase tc = new TestCase();
-		String summary, testType="", testScreenName;		
+		String summary, testType = "", testScreenName;
 		String gwtStatement = e.getStringCellValue(rowNumber, gwtMapping);
 		String label = e.getStringCellValue(rowNumber, labelMapping);
 		String upload = e.getStringCellValue(rowNumber, uploadStatus);
 		String assignee = null, currentSprint = null, url = null;
-		String issueRelatesTo = null, components = null;
+		String[] issueRelatesTo;
+		String components = null;
 		String zephyrTestId;
-		
+
 		tc.gwtSteps = gwtStatement;
-		
-		try
-		{
+
+		try {
 			zephyrTestId = e.getStringCellValue(rowNumber, zephyrTestCaseIDMapping);
+		} catch (Exception e) {
+
 		}
-		catch(Exception e)
-		{
-			
-		}
-		
+
 		tc.label = label;
-		
-		try
-		{
+
+		try {
 			summary = e.getStringCellValue(rowNumber, summaryMapping);
 			tc.summary = summary;
+		} catch (Exception e) {
 		}
-		catch(Exception e) {}
-		
-		try
-		{
+
+		try {
 			testType = e.getStringCellValue(rowNumber, testTypeMapping);
 			tc.testType = testType;
+		} catch (Exception e) {
 		}
-		catch(Exception e) {}
-		
-		try
-		{
+
+		try {
 			testScreenName = e.getStringCellValue(rowNumber, testScreenNameMapping);
 			tc.testScreenName = testScreenName;
+		} catch (Exception e) {
 		}
-		catch(Exception e) {}
-		
-		try
-		{
+
+		try {
 			summary = e.getStringCellValue(rowNumber, summaryMapping);
 			tc.summary = summary;
+		} catch (Exception e) {
 		}
-		catch(Exception e) {}
-		
-		try
-		{
+
+		try {
 			url = e.getStringCellValue(rowNumber, urlMapping);
 			tc.url = url;
+		} catch (Exception e) {
 		}
-		catch(Exception e) {}
-		
-		try
-		{
+
+		try {
 			assignee = e.getStringCellValue(rowNumber, assigneeMapping);
 			tc.assignee = assignee;
+		} catch (Exception e) {
 		}
-		catch(Exception e) {}
-		
-		try
-		{
+
+		try {
 			currentSprint = e.getStringCellValue(rowNumber, currentSprintMapping);
-			tc.currentSprint =currentSprint;
+			tc.currentSprint = currentSprint;
+		} catch (Exception e) {
 		}
-		catch(Exception e) {}
-		
-		try
-		{
-			issueRelatesTo = e.getStringCellValue(rowNumber, issueRelatesToMapping);
-			tc.issueRelatesTo =issueRelatesTo;
+
+		try {
+			issueRelatesTo = e.getStringCellValue(rowNumber, issueRelatesToMapping).replace("\n", "").split(",");
+			tc.issueRelatesTo = issueRelatesTo;
+		} catch (Exception e) {
 		}
-		catch(Exception e) {}
-		
-		try
-		{
+
+		try {
 			components = e.getStringCellValue(rowNumber, componentsMapping);
-			tc.components =components;
+			tc.components = components;
+		} catch (Exception e) {
 		}
-		catch(Exception e) {}
-		
-		if(upload.trim().toLowerCase().contains("tr") || upload.trim().contains("1"))
+
+		if (upload.trim().toLowerCase().contains("tr") || upload.trim().contains("1"))
 			return null;
 
-		switch(testType)
-		{
-		case "None": tc.testType = "None"; break;
-		case "Functional": tc.testType = "Functional"; break;
-		case "Regression": tc.testType = "Regression"; break;
-		case "Automation": tc.testType = "Automation"; break;
-		case "Performance": tc.testType = "Performance"; break;
-		default: tc.testType = "Functional"; break;
+		switch (testType) {
+		case "None":
+			tc.testType = "None";
+			break;
+		case "Functional":
+			tc.testType = "Functional";
+			break;
+		case "Regression":
+			tc.testType = "Regression";
+			break;
+		case "Automation":
+			tc.testType = "Automation";
+			break;
+		case "Performance":
+			tc.testType = "Performance";
+			break;
+		default:
+			tc.testType = "Functional";
+			break;
 		}
-		
+
 		String currStmt = null, nxtStmt = null, currStep = null;
 		StringBuffer singleTestStep = new StringBuffer(), singleExecutionResult = new StringBuffer();
-		
-		if(runWith.equalsIgnoreCase("BROWSER"))
-		{
-			String[] allSteps = gwtStatement.split("\n");		
-			for(int i=0; i<allSteps.length; i++)
-			{
+
+		if (runWith.equalsIgnoreCase("BROWSER")) {
+			String[] allSteps = gwtStatement.split("\n");
+			for (int i = 0; i < allSteps.length; i++) {
 				currStep = allSteps[i];
-				
-				if(currStep==null || currStep.trim().equals(""))
+
+				if (currStep == null || currStep.trim().equals(""))
 					continue;
-				
-				if(currStep.trim().toLowerCase().startsWith("given"))
-				{
+
+				if (currStep.trim().toLowerCase().startsWith("given")) {
 					currStmt = "given";
-					singleTestStep.append(currStep.trim()+"\n");
-				}
-				else if(currStep.trim().toLowerCase().startsWith("when"))
-				{
+					singleTestStep.append(currStep.trim() + "\n");
+				} else if (currStep.trim().toLowerCase().startsWith("when")) {
 					currStmt = "when";
-					if(!singleExecutionResult.toString().equalsIgnoreCase(""))
+					if (!singleExecutionResult.toString().equalsIgnoreCase(""))
 						tc.expectedResult.add(singleExecutionResult.toString().trim());
 					singleExecutionResult.delete(0, singleExecutionResult.length());
-					singleTestStep.append(currStep.trim()+"\n");
-				}
-				else if(currStep.trim().toLowerCase().startsWith("then"))
-				{
+					singleTestStep.append(currStep.trim() + "\n");
+				} else if (currStep.trim().toLowerCase().startsWith("then")) {
 					currStmt = "then";
 					tc.testSteps.add(singleTestStep.toString().trim());
 					singleTestStep.delete(0, singleTestStep.length());
-					singleExecutionResult.append(currStep.trim()+"\n");
+					singleExecutionResult.append(currStep.trim() + "\n");
 				}
-				
-				if(i != (allSteps.length-1))
-				{
-					if(allSteps[i+1].trim().toLowerCase().startsWith("given"))
+
+				if (i != (allSteps.length - 1)) {
+					if (allSteps[i + 1].trim().toLowerCase().startsWith("given"))
 						nxtStmt = "given";
-					else if(allSteps[i+1].trim().toLowerCase().startsWith("when"))
+					else if (allSteps[i + 1].trim().toLowerCase().startsWith("when"))
 						nxtStmt = "when";
-					else if(allSteps[i+1].trim().toLowerCase().startsWith("then"))
+					else if (allSteps[i + 1].trim().toLowerCase().startsWith("then"))
 						nxtStmt = "then";
-					else if(allSteps[i+1].trim().toLowerCase().startsWith("and"))
-					{
-						if(currStmt.equalsIgnoreCase("given"))
+					else if (allSteps[i + 1].trim().toLowerCase().startsWith("and")) {
+						if (currStmt.equalsIgnoreCase("given"))
 							nxtStmt = "given";
-						else if(currStmt.equalsIgnoreCase("when"))
+						else if (currStmt.equalsIgnoreCase("when"))
 							nxtStmt = "when";
-						else if(currStmt.equalsIgnoreCase("then"))
+						else if (currStmt.equalsIgnoreCase("then"))
 							nxtStmt = "then";
 					}
-				}
-				else
-				{
+				} else {
 					nxtStmt = null;
 				}
-				
-				
-				if(currStep.trim().toLowerCase().startsWith("then"))
-				{
-					if(nxtStmt==null)
+
+				if (currStep.trim().toLowerCase().startsWith("then")) {
+					if (nxtStmt == null)
 						tc.expectedResult.add(singleExecutionResult.toString().trim());
 				}
-					
-				
-				if(currStep.trim().toLowerCase().startsWith("and"))
-				{
-					if(currStmt.trim().toLowerCase().startsWith("given"))
-					{
-						singleTestStep.append(currStep.trim()+"\n");
-					}
-					else if(currStmt.trim().toLowerCase().startsWith("when"))
-					{
-						singleTestStep.append(currStep.trim()+"\n");
-					}
-					else if(currStmt.trim().toLowerCase().startsWith("then"))
-					{
-						singleExecutionResult.append(currStep.trim()+"\n");
-						if(nxtStmt==null)
+
+				if (currStep.trim().toLowerCase().startsWith("and")) {
+					if (currStmt.trim().toLowerCase().startsWith("given")) {
+						singleTestStep.append(currStep.trim() + "\n");
+					} else if (currStmt.trim().toLowerCase().startsWith("when")) {
+						singleTestStep.append(currStep.trim() + "\n");
+					} else if (currStmt.trim().toLowerCase().startsWith("then")) {
+						singleExecutionResult.append(currStep.trim() + "\n");
+						if (nxtStmt == null)
 							tc.expectedResult.add(singleExecutionResult.toString().trim());
 					}
 				}
 			}
 		}
-		
+
 		System.out.println(tc.summary + "\n");
-		
+
 		return tc;
 	}
 }

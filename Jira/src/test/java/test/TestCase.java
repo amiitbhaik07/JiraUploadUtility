@@ -14,7 +14,7 @@ public class TestCase
 	String assignee = "";
 	String currentSprint = "";
 	String url = "";
-	String issueRelatesTo = "";
+	String[] issueRelatesTo;
 	String gwtSteps = "";
 	String components = "";
 	 
