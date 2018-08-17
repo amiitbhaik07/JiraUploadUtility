@@ -56,6 +56,13 @@ public class JiraUploadUtility {
 				throw new Exception("Please specify whether to run with BROWSER or through API");
 			if ((projectKey == null || projectKey.equals("")) && runWith.equalsIgnoreCase("API"))
 				throw new Exception("Please specify the Project Key");
+			if(runWith.equalsIgnoreCase("API"))
+			{
+				if(username==null || username.trim().equals(""))
+					throw new Exception("Please enter the Username");
+				if(password==null || password.trim().equals(""))
+					throw new Exception("Please enter the Password");
+			}
 			if (hitCreateAfterEveryTest != null && !hitCreateAfterEveryTest.equals(""))
 				if (hitCreateAfterEveryTest.trim().equalsIgnoreCase("Y"))
 					boolHitCreateAfterEveryTest = true;
