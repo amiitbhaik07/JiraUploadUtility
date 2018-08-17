@@ -153,18 +153,27 @@ public class JiraUploadUtility {
 			System.out.println("Test Case ID : " + testCaseId);
 			System.out.println("*************************************");
 
+			boolean linkingErrorFlag = false;
 			if (t.issueRelatesTo.length > 1) {
 				String putUrl = postUrl + testCaseId;
 				for (int i = 1; i < t.issueRelatesTo.length; i++) {
-					request = new StringBuffer();
-					request.append(
-							"{\"update\": {\"issuelinks\": [{\"add\": {\"type\": {\"name\": \"Relates\",\"inward\": \"relates to\",\"outward\": \"relates to\"},\"outwardIssue\": {\"key\": \"");
-					request.append(t.issueRelatesTo[i]);
-					request.append("\"}}}]}}");
-					sendPutRequest(putUrl, request.toString(), encoder);
-					System.out.println(
-							"Additionally linked ID '" + t.issueRelatesTo[i] + "' to Test Case '" + testCaseId + "'");
-					System.out.println("*************************************");
+					try {
+						request = new StringBuffer();
+						request.append(
+								"{\"update\": {\"issuelinks\": [{\"add\": {\"type\": {\"name\": \"Relates\",\"inward\": \"relates to\",\"outward\": \"relates to\"},\"outwardIssue\": {\"key\": \"");
+						request.append(t.issueRelatesTo[i]);
+						request.append("\"}}}]}}");
+						System.out.println(request.toString());
+						sendPutRequest(putUrl, request.toString(), encoder);
+						System.out.println("Additionally linked ID '" + t.issueRelatesTo[i] + "' to Test Case '"
+								+ testCaseId + "'");
+						System.out.println("*************************************");
+						request.delete(0, request.length());
+					} catch (Exception e3) {
+						linkingErrorFlag = true;
+						System.out.println("ERROR : In linking Jira ID '" + t.issueRelatesTo[i]
+								+ "' with newly created Test Case '" + testCaseId + "'");
+					}
 				}
 			}
 
@@ -172,7 +181,10 @@ public class JiraUploadUtility {
 			e = new Excel(filePath);
 			e.getSheet(sheetName);
 			setMapping();
-			setUploadValue(t.summary, "TRUE", testCaseId);
+			if (linkingErrorFlag)
+				setUploadValue(t.summary, "TRUE/IssuesPartiallyLinked", testCaseId);
+			else
+				setUploadValue(t.summary, "TRUE", testCaseId);
 			FileOutputStream outputStream = new FileOutputStream(filePath);
 			e.workbook.write(outputStream);
 			e.closeWorkbook();
@@ -546,7 +558,7 @@ public class JiraUploadUtility {
 		}
 
 		try {
-			issueRelatesTo = e.getStringCellValue(rowNumber, issueRelatesToMapping).split(",");
+			issueRelatesTo = e.getStringCellValue(rowNumber, issueRelatesToMapping).replace("\n", "").split(",");
 			tc.issueRelatesTo = issueRelatesTo;
 		} catch (Exception e) {
 		}
