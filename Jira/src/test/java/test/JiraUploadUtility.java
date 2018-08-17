@@ -1,18 +1,20 @@
 package test;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintStream;
 import java.net.Authenticator;
 import java.net.HttpURLConnection;
 import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Scanner;
-
 import javax.swing.JOptionPane;
-
 import org.json.JSONObject;
 import org.openqa.selenium.By;
 import org.openqa.selenium.UnhandledAlertException;
@@ -34,11 +36,10 @@ public class JiraUploadUtility {
 	static boolean boolHitCreateAfterEveryTest = false;
 	static int firstTest = 0;
 	static String postUrl = "https://jira.mediware.com/rest/api/2/issue/";
-
 	static int successfullyUploaded = 0, errorInUploading = 0;
+	static PrintStream printStream;
 
 	public static void main(String[] args) throws Exception {
-		System.out.println("Started...");
 		try {
 			sheetName = "Tests";
 			e = new Excel(filePath);
@@ -49,59 +50,55 @@ public class JiraUploadUtility {
 			password = e.getStringCellValue(3, 1);
 			runWith = e.getStringCellValue(4, 1);
 			projectKey = e.getStringCellValue(5, 1);
-
 			if (defaultProjectName == null || defaultProjectName.equals(""))
 				throw new Exception("Please enter default project name in 'Data' sheet of JiraUpload.xlsx");
-
 			if (runWith == null || runWith.equals(""))
 				throw new Exception("Please specify whether to run with BROWSER or through API");
-
 			if ((projectKey == null || projectKey.equals("")) && runWith.equalsIgnoreCase("API"))
 				throw new Exception("Please specify the Project Key");
-
 			if (hitCreateAfterEveryTest != null && !hitCreateAfterEveryTest.equals(""))
 				if (hitCreateAfterEveryTest.trim().equalsIgnoreCase("Y"))
 					boolHitCreateAfterEveryTest = true;
-
 			e.getSheet(sheetName);
 			ArrayList<TestCase> allTestCases = new ArrayList<TestCase>();
 			TestCase tc = null;
 			setMapping();
-			System.out.println("====================================");
+			new File(currDir + "\\Logs\\").mkdirs();
+			printStream = new PrintStream(new FileOutputStream(new File("Logs\\Log_"+getCurrentTimeStamp()+".txt")));
+			printToLogsAndConsole("====================================");
 			for (int i = 1; i < e.sheet.getPhysicalNumberOfRows(); i++) {
 				try {
 					tc = JiraUploadUtility.getTestCase(i);
 				} catch (Exception e) {
 					tc = null;
-					System.out.println("Exception : " + e.getMessage());
+					printToLogsAndConsole("Exception : " + e.getMessage());
 				}
 				if (tc != null)
 					if (tc.summary != null && !tc.summary.equals(""))
 						allTestCases.add(tc);
 			}
 			e.closeWorkbook();
-
-			System.out.println("====================================");
-			System.out.println("Total no of Records to process : " + allTestCases.size());
-			System.out.println("Hit ENTER to continue. (Please close the JiraUpload.xlsx sheet)");
+			printToLogsAndConsole("====================================");
+			printToLogsAndConsole("Total no of Records to process : " + allTestCases.size());
+			printToLogsAndConsole("Hit ENTER to continue. (Please close the JiraUpload.xlsx sheet)");
 			Scanner sc = new Scanner(System.in);
 			sc.nextLine();
-			System.out.println("====================================");
+			printToLogsAndConsole("====================================");
 			int counter = 1;
 			for (TestCase t : allTestCases) {
-				System.out.println(
+				printToLogsAndConsole(
 						"\n\n==============================================================================================================");
-				System.out.println("Test Number " + (counter++) + " of " + allTestCases.size() + " : " + t.summary);
+				printToLogsAndConsole("Test Number " + (counter++) + " of " + allTestCases.size() + " : " + t.summary);
 				if (runWith.equalsIgnoreCase("API"))
 					uploadThroughApi(t);
 				else
 					uploadThroughWeb(t);
 			}
-			System.out.println(
+			printToLogsAndConsole(
 					"==============================================================================================================");
-			System.out.println(
+			printToLogsAndConsole(
 					"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ Successfully Completed @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-			System.out.println("Upload SUCCESS    :     " + successfullyUploaded + "\nUpload FAILED         :     "
+			printToLogsAndConsole("Upload SUCCESS    :     " + successfullyUploaded + "\nUpload FAILED         :     "
 					+ errorInUploading);
 			JOptionPane.showMessageDialog(null, "Upload SUCCESS    :     " + successfullyUploaded
 					+ "\nUpload FAILED         :     " + errorInUploading);
@@ -111,6 +108,16 @@ public class JiraUploadUtility {
 					+ "\nUpload FAILED         :     " + errorInUploading);
 			throw e;
 		}
+	}
+	
+	public static String getCurrentTimeStamp()
+	{
+		return new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss").format(new Date());
+	}
+
+	public static void printToLogsAndConsole(String msg){
+		printStream.println(msg);
+		System.out.println(msg);
 	}
 
 	public static void uploadThroughApi(TestCase t) throws Exception {
@@ -135,7 +142,6 @@ public class JiraUploadUtility {
 			request.append(",\"labels\": [\"");
 			request.append(t.label);
 			request.append("\"]},\"update\" : {\"customfield_10006\": [{\"set\": 0}]");
-			int totalIssueRelatesTo = t.issueRelatesTo.length;
 			if (t.issueRelatesTo.length != 0) {
 				request.append(
 						",\"issuelinks\": [{\"add\": {\"type\": {\"name\": \"Relates\",\"inward\": \"relates to\",\"outward\": \"relates to\"},\"outwardIssue\": {\"key\": \"");
@@ -143,16 +149,15 @@ public class JiraUploadUtility {
 				request.append("\"}}}]");
 			}
 			request.append("}}");
-			System.out.println("*************************************");
-			System.out.println(request.toString());
-			System.out.println("*************************************");
+			printToLogsAndConsole("*************************************");
+			printToLogsAndConsole(request.toString());
+			printToLogsAndConsole("*************************************");
 			String response = sendPostRequest(postUrl, request.toString(), encoder);
-			System.out.println(response);
-			System.out.println("*************************************");
+			printToLogsAndConsole(response);
+			printToLogsAndConsole("*************************************");
 			String testCaseId = getTestCaseId(response);
-			System.out.println("Test Case ID : " + testCaseId);
-			System.out.println("*************************************");
-
+			printToLogsAndConsole("Test Case ID : " + testCaseId);
+			printToLogsAndConsole("*************************************");
 			boolean linkingErrorFlag = false;
 			if (t.issueRelatesTo.length > 1) {
 				String putUrl = postUrl + testCaseId;
@@ -163,20 +168,19 @@ public class JiraUploadUtility {
 								"{\"update\": {\"issuelinks\": [{\"add\": {\"type\": {\"name\": \"Relates\",\"inward\": \"relates to\",\"outward\": \"relates to\"},\"outwardIssue\": {\"key\": \"");
 						request.append(t.issueRelatesTo[i]);
 						request.append("\"}}}]}}");
-						System.out.println(request.toString());
+						printToLogsAndConsole(request.toString());
 						sendPutRequest(putUrl, request.toString(), encoder);
-						System.out.println("Additionally linked ID '" + t.issueRelatesTo[i] + "' to Test Case '"
+						printToLogsAndConsole("Additionally linked ID '" + t.issueRelatesTo[i] + "' to Test Case '"
 								+ testCaseId + "'");
-						System.out.println("*************************************");
+						printToLogsAndConsole("*************************************");
 						request.delete(0, request.length());
 					} catch (Exception e3) {
 						linkingErrorFlag = true;
-						System.out.println("ERROR : In linking Jira ID '" + t.issueRelatesTo[i]
+						printToLogsAndConsole("ERROR : In linking Jira ID '" + t.issueRelatesTo[i]
 								+ "' with newly created Test Case '" + testCaseId + "'");
 					}
 				}
 			}
-
 			successfullyUploaded++;
 			e = new Excel(filePath);
 			e.getSheet(sheetName);
@@ -263,9 +267,6 @@ public class JiraUploadUtility {
 	}
 
 	private static String authenticateUser() throws Exception {
-		/*
-		 * final String username = "amit.bhaik"; final String password = "!Aniil2691%";
-		 */
 		Authenticator.setDefault(new Authenticator() {
 			protected PasswordAuthentication getPasswordAuthentication() {
 				return new PasswordAuthentication(username, password.toCharArray());
@@ -281,8 +282,7 @@ public class JiraUploadUtility {
 		String testCaseId = "";
 		WebDriver driver = null;
 		BasicUtils basic = null;
-		System.out.println("Uploading : " + t.summary);
-
+		printToLogsAndConsole("Uploading : " + t.summary);
 		if (firstTest == 0) {
 			driver = LaunchBrowsers.launchChrome();
 			basic = new BasicUtils(driver);
@@ -297,7 +297,6 @@ public class JiraUploadUtility {
 			basic.click(By.xpath(
 					"//div[@id='browse_link-content']/descendant::a[contains(text(),'" + defaultProjectName + "')]"));
 		}
-
 		testCaseId = "";
 		try {
 			basic.click(By.id("create_link"));
@@ -307,45 +306,26 @@ public class JiraUploadUtility {
 				Thread.sleep(1000);
 			}
 			firstTest++;
-
-			System.out.println("Entering details");
-
-			basic.typeText(By.id("summary"), t.summary);
-
+			printToLogsAndConsole("Entering details");			
+			basic.typeText(By.id("summary"), t.summary);			
 			if (!t.testScreenName.isEmpty()) {
 				basic.click(By.id("aui-uid-3"));
 				basic.typeText(By.id("description"), t.testScreenName);
-				/*
-				 * if(basic.isElementPresentAtThisMoment(By.id("mce_8_ifr"))) {
-				 * basic.switchToIframe(By.id("mce_8_ifr"));
-				 * basic.typeText(By.id("description"), t.testScreenName);
-				 * basic.switchBackToParent(); } else {
-				 * 
-				 * }
-				 */
-			}
-
-			basic.typeText(By.xpath("//label[contains(text(),'Story Points')]/following-sibling::input"), "0");
-
+			}			
+			basic.typeText(By.xpath("//label[contains(text(),'Story Points')]/following-sibling::input"), "0");			
 			if (!t.assignee.isEmpty()) {
 				basic.typeText(By.id("assignee-field"), t.assignee);
 				Thread.sleep(2000);
 				basic.pressEnter();
-				// basic.click(By.xpath("//ul[@id='all-users']/descendant::em"));
-			}
-
+			}			
 			basic.typeText(By.id("labels-textarea"), t.label);
 			basic.select(By.xpath("//label[contains(text(),'Test Type')]/following-sibling::select"), t.testType);
-
 			if (!t.currentSprint.isEmpty()) {
 				basic.typeText(By.id("customfield_10000-field"), t.currentSprint);
-				// basic.click(By.xpath("//ul[@id='suggestions']/descendant::span"));
 				Thread.sleep(2000);
 				basic.pressEnter();
 			}
-
 			Thread.sleep(500);
-
 			if (t.issueRelatesTo.length != 0) {
 				for (int i = 0; i < t.issueRelatesTo.length; i++) {
 					basic.typeText(By.id("issuelinks-issues-textarea"), t.issueRelatesTo[i]);
@@ -353,11 +333,9 @@ public class JiraUploadUtility {
 					basic.pressEnter();
 				}
 			}
-
 			if (!t.components.isEmpty()) {
 				basic.typeText(By.id("components-textarea"), t.components);
 			}
-
 			for (int i = 0; i < t.testSteps.size(); i++) {
 				basic.typeText(By.xpath(
 						"//table[@id='teststep-table']/tbody[contains(@class,'create')]/tr[1]/descendant::textarea[1]"),
@@ -375,20 +353,16 @@ public class JiraUploadUtility {
 				basic.click(By.xpath("//input[@class='aui-button' and @value='Add']"));
 				Thread.sleep(500);
 			}
-
 			Thread.sleep(1500);
-
 			if (boolHitCreateAfterEveryTest)
 				basic.click(By.id("create-issue-submit"));
 			else
 				basic.wait.until(ExpectedConditions.invisibilityOfElementLocated(By.id("create-issue-submit")));
 			Thread.sleep(500);
-
 			testCaseId = basic.wait
 					.until(ExpectedConditions
 							.visibilityOfElementLocated(By.xpath("//a[contains(@class,'issue-created-key')]")))
 					.getAttribute("data-issue-key");
-
 			successfullyUploaded++;
 			e = new Excel(filePath);
 			e.getSheet(sheetName);
@@ -412,7 +386,6 @@ public class JiraUploadUtility {
 		} catch (WebDriverException wde) {
 			if (wde.getMessage().contains("reachable")) {
 				System.exit(0);
-				// break;
 			}
 		} catch (Exception e1) {
 			errorInUploading++;
@@ -426,11 +399,6 @@ public class JiraUploadUtility {
 			JOptionPane.showMessageDialog(null,
 					"Some exception occured, please add steps for this test case manually and hit 'Create' button!");
 		}
-
-		// basic.click(By.xpath("//span[@class='aui-icon icon-close' and
-		// @role='button']"));
-		// e.closeWorkbook();
-
 	}
 
 	public static void setUploadValue(String testName, String value, String testCaseId) {
@@ -441,7 +409,6 @@ public class JiraUploadUtility {
 				} catch (Exception e1) {
 					e.sheet.getRow(i).createCell(uploadStatus).setCellValue(value);
 				}
-
 				try {
 					e.sheet.getRow(i).getCell(zephyrTestCaseIDMapping).setCellValue(testCaseId);
 				} catch (Exception e1) {
@@ -453,7 +420,6 @@ public class JiraUploadUtility {
 	}
 
 	public static void setMapping() throws Exception {
-		// Map columns
 		for (int i = 0; i < e.sheet.getRow(0).getPhysicalNumberOfCells(); i++) {
 			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("title"))
 				summaryMapping = i;
@@ -479,9 +445,7 @@ public class JiraUploadUtility {
 				issueRelatesToMapping = i;
 			if (e.getStringCellValue(0, i).toLowerCase().trim().equals("components"))
 				componentsMapping = i;
-
 		}
-
 		if (summaryMapping == -1)
 			throw new Exception("Please add 'Title' column in excel sheet");
 		if (gwtMapping == -1 && runWith.equalsIgnoreCase("BROWSER"))
@@ -504,74 +468,59 @@ public class JiraUploadUtility {
 		String[] issueRelatesTo;
 		String components = null;
 		String zephyrTestId;
-
 		tc.gwtSteps = gwtStatement;
-
 		try {
 			zephyrTestId = e.getStringCellValue(rowNumber, zephyrTestCaseIDMapping);
 		} catch (Exception e) {
-
 		}
-
 		tc.label = label;
-
 		try {
 			summary = e.getStringCellValue(rowNumber, summaryMapping);
 			tc.summary = summary;
 		} catch (Exception e) {
 		}
-
 		try {
 			testType = e.getStringCellValue(rowNumber, testTypeMapping);
 			tc.testType = testType;
 		} catch (Exception e) {
 		}
-
 		try {
 			testScreenName = e.getStringCellValue(rowNumber, testScreenNameMapping);
 			tc.testScreenName = testScreenName;
 		} catch (Exception e) {
 		}
-
 		try {
 			summary = e.getStringCellValue(rowNumber, summaryMapping);
 			tc.summary = summary;
 		} catch (Exception e) {
 		}
-
 		try {
 			url = e.getStringCellValue(rowNumber, urlMapping);
 			tc.url = url;
 		} catch (Exception e) {
 		}
-
 		try {
 			assignee = e.getStringCellValue(rowNumber, assigneeMapping);
 			tc.assignee = assignee;
 		} catch (Exception e) {
 		}
-
 		try {
 			currentSprint = e.getStringCellValue(rowNumber, currentSprintMapping);
 			tc.currentSprint = currentSprint;
 		} catch (Exception e) {
 		}
-
 		try {
 			issueRelatesTo = e.getStringCellValue(rowNumber, issueRelatesToMapping).replace("\n", "").split(",");
 			tc.issueRelatesTo = issueRelatesTo;
 		} catch (Exception e) {
 		}
-
 		try {
 			components = e.getStringCellValue(rowNumber, componentsMapping);
 			tc.components = components;
 		} catch (Exception e) {
 		}
-
 		if (upload.trim().toLowerCase().contains("tr") || upload.trim().contains("1"))
 			return null;
-
 		switch (testType) {
 		case "None":
 			tc.testType = "None";
@@ -592,18 +541,14 @@ public class JiraUploadUtility {
 			tc.testType = "Functional";
 			break;
 		}
-
 		String currStmt = null, nxtStmt = null, currStep = null;
 		StringBuffer singleTestStep = new StringBuffer(), singleExecutionResult = new StringBuffer();
-
 		if (runWith.equalsIgnoreCase("BROWSER")) {
 			String[] allSteps = gwtStatement.split("\n");
 			for (int i = 0; i < allSteps.length; i++) {
 				currStep = allSteps[i];
-
 				if (currStep == null || currStep.trim().equals(""))
 					continue;
-
 				if (currStep.trim().toLowerCase().startsWith("given")) {
 					currStmt = "given";
 					singleTestStep.append(currStep.trim() + "\n");
@@ -619,7 +564,6 @@ public class JiraUploadUtility {
 					singleTestStep.delete(0, singleTestStep.length());
 					singleExecutionResult.append(currStep.trim() + "\n");
 				}
-
 				if (i != (allSteps.length - 1)) {
 					if (allSteps[i + 1].trim().toLowerCase().startsWith("given"))
 						nxtStmt = "given";
@@ -638,12 +582,10 @@ public class JiraUploadUtility {
 				} else {
 					nxtStmt = null;
 				}
-
 				if (currStep.trim().toLowerCase().startsWith("then")) {
 					if (nxtStmt == null)
 						tc.expectedResult.add(singleExecutionResult.toString().trim());
 				}
-
 				if (currStep.trim().toLowerCase().startsWith("and")) {
 					if (currStmt.trim().toLowerCase().startsWith("given")) {
 						singleTestStep.append(currStep.trim() + "\n");
@@ -657,9 +599,7 @@ public class JiraUploadUtility {
 				}
 			}
 		}
-
-		System.out.println(tc.summary + "\n");
-
+		printToLogsAndConsole(tc.summary + "\n");
 		return tc;
 	}
 }
