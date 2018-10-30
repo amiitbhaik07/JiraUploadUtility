@@ -15,7 +15,7 @@ public class BasicUtils
 {
 	WebDriver driver;
 	WebDriverWait wait;
-	
+	 
 	public BasicUtils(WebDriver driver)
 	{
 		this.driver = driver;
