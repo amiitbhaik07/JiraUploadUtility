@@ -157,11 +157,11 @@ public class JiraUploadUtility {
 			}
 			request.append("}}");
 			printToLogsAndConsole("*************************************");
-			printToLogsAndConsole(request.toString());
-			printToLogsAndConsole("*************************************");
+			/*printToLogsAndConsole(request.toString());
+			printToLogsAndConsole("*************************************");*/
 			String response = sendPostRequest(postUrl, request.toString(), encoder);
-			printToLogsAndConsole(response);
-			printToLogsAndConsole("*************************************");
+			/*printToLogsAndConsole(response);
+			printToLogsAndConsole("*************************************");*/
 			String testCaseId = getTestCaseId(response);
 			printToLogsAndConsole("Test Case ID : " + testCaseId);
 			printToLogsAndConsole("*************************************");
@@ -175,7 +175,7 @@ public class JiraUploadUtility {
 								"{\"update\": {\"issuelinks\": [{\"add\": {\"type\": {\"name\": \"Relates\",\"inward\": \"relates to\",\"outward\": \"relates to\"},\"outwardIssue\": {\"key\": \"");
 						request.append(t.issueRelatesTo[i]);
 						request.append("\"}}}]}}");
-						printToLogsAndConsole(request.toString());
+						//printToLogsAndConsole(request.toString());
 						sendPutRequest(putUrl, request.toString(), encoder);
 						printToLogsAndConsole("Additionally linked ID '" + t.issueRelatesTo[i] + "' to Test Case '"
 								+ testCaseId + "'");
