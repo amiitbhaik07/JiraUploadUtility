@@ -24,7 +24,7 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 
 public class JiraUploadUtility {
 	static Excel e;
-	static String excelName = "JiraUpload";
+	static String excelName = "JiraUploadExcel";
 	static String sheetName;
 	static int summaryMapping = -1, gwtMapping = -1, labelMapping = -1, testTypeMapping = -1, uploadStatus = -1,
 			testScreenNameMapping = -1, zephyrTestCaseIDMapping = -1, currentSprintMapping = -1, assigneeMapping = -1,
@@ -148,7 +148,10 @@ public class JiraUploadUtility {
 			request.append("\"}");
 			request.append(",\"labels\": [\"");
 			request.append(t.label);
-			request.append("\"]},\"update\" : {\"customfield_10006\": [{\"set\": 0}]");
+			request.append("\"]");
+			if(t.components != null && !t.components.equals(""))
+				request.append(",\"components\": [{\"name\" : \""+t.components+"\"}]");
+			request.append("},\"update\" : {\"customfield_10006\": [{\"set\": 0}]");
 			if (t.issueRelatesTo.length != 0) {
 				request.append(
 						",\"issuelinks\": [{\"add\": {\"type\": {\"name\": \"Relates\",\"inward\": \"relates to\",\"outward\": \"relates to\"},\"outwardIssue\": {\"key\": \"");
